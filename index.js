@@ -11,9 +11,7 @@ app.use(express.json());
 
 // Instantiating formsg-sdk without parameters default to using the package's
 // production public signing key.
-const formsg = require("@opengovsg/formsg-sdk")({
-  mode: "development",
-});
+const formsg = require("@opengovsg/formsg-sdk")();
 
 // This is where your domain is hosted, and should match
 // the URI supplied to FormSG in the form dashboard
@@ -73,6 +71,14 @@ const port = process.env.PORT || "3000";
 app.listen(port, () => console.log(`Running on port ${port}`));
 
 function postToSlack(message, body) {
+  if (!process.env.SLACK_WEBHOOK) {
+    console.log(
+      "WARNING:: SLACK_WEBHOOK is missing, please add this environment variable to notify error message to your Slack channel"
+    );
+
+    return;
+  }
+
   axios
     .post(process.env.SLACK_WEBHOOK, {
       text: message,
