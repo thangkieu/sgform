@@ -1,0 +1,18 @@
+{
+  "name": "sgform",
+  "version": "1.0.0",
+  "description": "SGForm",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@opengovsg/formsg-sdk": "^0.9.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1"
+  }
+}
