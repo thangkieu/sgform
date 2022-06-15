@@ -55,6 +55,8 @@ app.post(
         : formsg.crypto.decrypt(formSecretKey, req.body.data);
 
       // If the decryption failed, submission will be `null`.
+      // submission schema: DecryptedContent | DecryptedContentAndAttachments | null
+      // check types.d.ts
       if (submission) {
         // Continue processing the submission
       } else {
