@@ -12,7 +12,7 @@ app.use(express.json());
 // Instantiating formsg-sdk without parameters default to using the package's
 // production public signing key.
 const formsg = require("@opengovsg/formsg-sdk")({
-  mode: "production",
+  mode: "development",
 });
 
 // This is where your domain is hosted, and should match
@@ -25,36 +25,12 @@ const formSecretKey = process.env.FORM_SECRET_KEY;
 // Set to true if you need to download and decrypt attachments from submissions
 const HAS_ATTACHMENTS = false;
 
-function postToSlack(message, body) {
-  console.log("mesage", message);
-  axios
-    .post(process.env.SLACK_WEBHOOK, {
-      text: message,
-      blocks: [
-        {
-          type: "section",
-          text: { type: "mrkdwn", text: message },
-        },
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: "```" + JSON.stringify(body, null, 2) + "```",
-          },
-        },
-      ],
-    })
-    .catch(function (error) {
-      console.log(error);
-    });
-}
-
 app.post(
   "/submissions",
   // Endpoint authentication by verifying signatures
   async function (req, res, next) {
-    postToSlack("Receive the request", {
-      header: [req.get("X-FormSG-Signature")],
+    postToSlack("Request Details::", {
+      header: { "X-FormSG-Signature": req.get("X-FormSG-Signature") },
       body: req.body,
     });
 
@@ -63,25 +39,62 @@ app.post(
       // Continue processing the POST body
       return next();
     } catch (e) {
+      postToSlack(`Authenticate Error:: \`${e.message}\``);
+
       return res.status(401).send({ message: "Unauthorized" });
     }
   },
   // Decrypt the submission
   async function (req, res, next) {
-    // If `verifiedContent` is provided in `req.body.data`, the return object
-    // will include a verified key.
-    const submission = HAS_ATTACHMENTS
-      ? await formsg.crypto.decryptWithAttachments(formSecretKey, req.body.data)
-      : formsg.crypto.decrypt(formSecretKey, req.body.data);
+    try {
+      // If `verifiedContent` is provided in `req.body.data`, the return object
+      // will include a verified key.
+      const submission = HAS_ATTACHMENTS
+        ? await formsg.crypto.decryptWithAttachments(
+            formSecretKey,
+            req.body.data
+          )
+        : formsg.crypto.decrypt(formSecretKey, req.body.data);
 
-    // If the decryption failed, submission will be `null`.
-    if (submission) {
-      // Continue processing the submission
-    } else {
-      // Could not decrypt the submission
+      // If the decryption failed, submission will be `null`.
+      if (submission) {
+        // Continue processing the submission
+      } else {
+        // Could not decrypt the submission
+        postToSlack("Could not decrypt the submission. I don't know why");
+      }
+    } catch (e) {
+      postToSlack("Could not decrypt the submission");
     }
   }
 );
 
 const port = process.env.PORT || "3000";
 app.listen(port, () => console.log(`Running on port ${port}`));
+
+function postToSlack(message, body) {
+  axios
+    .post(process.env.SLACK_WEBHOOK, {
+      text: message,
+      blocks: [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: message },
+        },
+        ...(body
+          ? [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: "```" + JSON.stringify(body, null, 2) + "```",
+                },
+              },
+            ]
+          : []),
+      ],
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+}
