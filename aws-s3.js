@@ -8,7 +8,7 @@ const {
 } = require("@aws-sdk/client-s3");
 
 const clientS3 = new S3({
-  region: process.env.AWS_BUCKET_NAME || "ap-southeast-1",
+  region: process.env.AWS_REGION || "ap-southeast-1",
 });
 
 async function sendToS3(filename, fileContent, foldername = "formsg") {
