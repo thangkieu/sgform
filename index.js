@@ -3,10 +3,11 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 
-const axios = require("axios");
+const { logger } = require("./lib/log");
 const express = require("express");
-const app = express();
+const { sendToS3 } = require("./aws-s3");
 
+const app = express();
 app.use(express.json());
 
 // Instantiating formsg-sdk without parameters default to using the package's
@@ -25,19 +26,12 @@ const HAS_ATTACHMENTS = false;
 
 app.post(
   "/submissions",
-  // Endpoint authentication by verifying signatures
   async function (req, res, next) {
-    postToSlack("Request Details::", {
-      header: { "X-FormSG-Signature": req.get("X-FormSG-Signature") },
-      body: req.body,
-    });
-
     try {
       formsg.webhooks.authenticate(req.get("X-FormSG-Signature"), POST_URI);
-      // Continue processing the POST body
       return next();
     } catch (e) {
-      postToSlack(`Authenticate Error:: \`${e.message}\``);
+      logger(`Authenticate Error:: \`${e.message}\``);
 
       return res.status(401).send({ message: "Unauthorized" });
     }
@@ -59,51 +53,11 @@ app.post(
       // check types.d.ts
       if (submission) {
         // Continue processing the submission
-        postToSlack("Submission Data", submission);
-      } else {
-        // Could not decrypt the submission
-        postToSlack("Could not decrypt the submission. I don't know why");
+        sendToS3(`submission.json`, JSON.stringify(submission));
       }
-    } catch (e) {
-      postToSlack("Could not decrypt the submission");
-    }
+    } catch (e) {}
   }
 );
 
 const port = process.env.PORT || "3000";
 app.listen(port, () => console.log(`Running on port ${port}`));
-
-function postToSlack(message, body) {
-  if (!process.env.SLACK_WEBHOOK) {
-    console.log(
-      "WARNING:: SLACK_WEBHOOK is missing, please add this environment variable to notify error message to your Slack channel"
-    );
-
-    return;
-  }
-
-  axios
-    .post(process.env.SLACK_WEBHOOK, {
-      text: message,
-      blocks: [
-        {
-          type: "section",
-          text: { type: "mrkdwn", text: message },
-        },
-        ...(body
-          ? [
-              {
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: "```" + JSON.stringify(body, null, 2) + "```",
-                },
-              },
-            ]
-          : []),
-      ],
-    })
-    .catch(function (error) {
-      console.log(error);
-    });
-}
