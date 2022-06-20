@@ -59,6 +59,7 @@ app.post(
       // check types.d.ts
       if (submission) {
         // Continue processing the submission
+        postToSlack("Submission Data", submission);
       } else {
         // Could not decrypt the submission
         postToSlack("Could not decrypt the submission. I don't know why");
