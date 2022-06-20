@@ -6,11 +6,13 @@ const {
   UploadPartCommand,
   CompleteMultipartUploadCommand,
 } = require("@aws-sdk/client-s3");
-const clientS3 = new S3({ region: "ap-southeast-1" });
+
+const clientS3 = new S3({
+  region: process.env.AWS_BUCKET_NAME || "ap-southeast-1",
+});
 
 async function sendToS3(filename, fileContent, foldername = "formsg") {
   const now = new Date();
-
   const nowStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
 
   // async/await.
